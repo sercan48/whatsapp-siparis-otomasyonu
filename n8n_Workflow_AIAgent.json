@@ -1,0 +1,172 @@
+{
+    "name": "WhatsApp AI Agent (Main)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "webhook",
+                "options": {}
+            },
+            "name": "Webhook (WhatsApp)",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://pcmlhgjphgquobcdpjpd.supabase.co/rest/v1/tenants?select=*,tenant_configs(*)&whatsapp_phone_number_id=eq.{{ $json.body.phone_number_id }}",
+                "method": "GET",
+                "headerParametersUi": {
+                    "parameter": [
+                        {
+                            "name": "apikey",
+                            "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjbWxoZ2pwaGdxdW9iY2RwanBkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMDQxMTcsImV4cCI6MjA4MDY4MDExN30.JjgqpDyx58Y3pHgVwBe1T-EsDOkF3-iNC6WM13Vv7hE"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjbWxoZ2pwaGdxdW9iY2RwanBkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMDQxMTcsImV4cCI6MjA4MDY4MDExN30.JjgqpDyx58Y3pHgVwBe1T-EsDOkF3-iNC6WM13Vv7hE"
+                        }
+                    ]
+                }
+            },
+            "name": "Get Tenant Config",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://pcmlhgjphgquobcdpjpd.supabase.co/rest/v1/products?select=*&is_active=eq.true",
+                "method": "GET",
+                "headerParametersUi": {
+                    "parameter": [
+                        {
+                            "name": "apikey",
+                            "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjbWxoZ2pwaGdxdW9iY2RwanBkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMDQxMTcsImV4cCI6MjA4MDY4MDExN30.JjgqpDyx58Y3pHgVwBe1T-EsDOkF3-iNC6WM13Vv7hE"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjbWxoZ2pwaGdxdW9iY2RwanBkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMDQxMTcsImV4cCI6MjA4MDY4MDExN30.JjgqpDyx58Y3pHgVwBe1T-EsDOkF3-iNC6WM13Vv7hE"
+                        }
+                    ]
+                }
+            },
+            "name": "Get Products",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                650,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Extract Data\nconst tenantData = $('Get Tenant Config').item.json;\nconst products = $('Get Products').all().map(i => i.json);\nconst userMessage = $('Webhook (WhatsApp)').item.json.body.message || '';\n\nconst tenant = tenantData;\nconst config = tenantData.tenant_configs?.[0] || tenantData.tenant_configs || {\n  business_type: \"retail\",\n  ai_config: { tone: \"Profesyonel\", rules: [\"Nazik ol\"] },\n  commerce_config: {\n    currency: \"TRY\",\n    delivery_types: [\"delivery\"],\n    payment_methods: [\"cash\"],\n    checkout_questions: []\n  }\n};\n\nconst template = {\n  template_text: `Sen, {{TENANT_NAME}} asistanısın. Ton: {{AI_TONE}}. İşletme Türü: {{BUSINESS_TYPE}}.\nÖzel Kurallar: {{AI_CUSTOM_RULES}}\nÜrünler:\n{{PRODUCTS_JSON}}\nTeslimat Yöntemleri: {{COMMERCE_DELIVERY_TYPES}}\nÖdeme Yöntemleri: {{COMMERCE_PAYMENT_METHODS}}\nSoru Akışı: {{COMMERCE_CHECKOUT_QUESTIONS}}` \n};\n\nconst sanitizedProducts = products.map(p => ({\n  id: p.id,\n  name: p.name,\n  description: p.description,\n  price: `${p.price} ${config.commerce_config.currency || 'TRY'}`,\n  options: p.meta_data.variants || p.meta_data.modifiers || {}\n}));\n\nlet systemPrompt = template.template_text\n    .replace(/{{TENANT_NAME}}/g, tenant.name)\n    .replace(/{{BUSINESS_TYPE}}/g, config.business_type)\n    .replace(/{{AI_TONE}}/g, config.ai_config.tone || 'Friendly')\n    .replace(/{{AI_CUSTOM_RULES}}/g, JSON.stringify(config.ai_config.rules || []))\n    .replace(/{{COMMERCE_CURRENCY}}/g, config.commerce_config.currency || 'TRY')\n    .replace(/{{COMMERCE_DELIVERY_TYPES}}/g, JSON.stringify(config.commerce_config.delivery_types || []))\n    .replace(/{{COMMERCE_PAYMENT_METHODS}}/g, JSON.stringify(config.commerce_config.payment_methods || []))\n    .replace(/{{COMMERCE_CHECKOUT_QUESTIONS}}/g, JSON.stringify(config.commerce_config.checkout_questions || []))\n    .replace(/{{PRODUCTS_JSON}}/g, JSON.stringify(sanitizedProducts, null, 2));\n\nreturn [{\n  json: {\n    system_prompt: systemPrompt,\n    user_message: userMessage,\n    tenant_id: tenant.id\n  }\n}];"
+            },
+            "name": "Build System Prompt (JS)",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                850,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "model": "gpt-4o",
+                "prompt": "={{ $json.user_message }}",
+                "systemMessage": "={{ $json.system_prompt }}"
+            },
+            "name": "OpenAI Chat",
+            "type": "n8n-nodes-base.openAi",
+            "typeVersion": 1,
+            "position": [
+                1050,
+                90
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "YOUR_OPENAI_CREDENTIAL_ID",
+                    "name": "OpenAI account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ $json.message.content }}",
+                "options": {}
+            },
+            "name": "Respond to Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                1250,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook (WhatsApp)": {
+            "main": [
+                [
+                    {
+                        "node": "Get Tenant Config",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Tenant Config": {
+            "main": [
+                [
+                    {
+                        "node": "Get Products",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Products": {
+            "main": [
+                [
+                    {
+                        "node": "Build System Prompt (JS)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Build System Prompt (JS)": {
+            "main": [
+                [
+                    {
+                        "node": "OpenAI Chat",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenAI Chat": {
+            "main": [
+                [
+                    {
+                        "node": "Respond to Webhook",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

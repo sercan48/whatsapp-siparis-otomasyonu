@@ -1,0 +1,125 @@
+{
+    "name": "2_AI_Order_Processor",
+    "active": false,
+    "versionId": "22222222-2222-2222-2222-222222222222",
+    "nodes": [
+        {
+            "parameters": {},
+            "name": "Execute Workflow Trigger",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                460,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.openai.com/v1/chat/completions",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "model",
+                            "value": "gpt-4-turbo"
+                        },
+                        {
+                            "name": "messages",
+                            "value": "={{ [{\"role\": \"system\", \"content\": \"You are a waiter. Parse the order.\"}, {\"role\": \"user\", \"content\": $json.message_text}] }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "OpenAI Analysis",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                680,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://graph.facebook.com/v17.0/{{ $env.WHATSAPP_PHONE_ID }}/messages",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer {{ $env.WHATSAPP_TOKEN }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "messaging_product",
+                            "value": "whatsapp"
+                        },
+                        {
+                            "name": "to",
+                            "value": "={{ $json.customer_phone }}"
+                        },
+                        {
+                            "name": "type",
+                            "value": "interactive"
+                        },
+                        {
+                            "name": "interactive",
+                            "value": "={{ {\"type\": \"button\", \"body\": {\"text\": \"Siparişiniz: \" + $json.parsed_order}, \"action\": {\"buttons\": [{\"type\": \"reply\", \"reply\": {\"id\": \"confirm_order\", \"title\": \"Onaylıyorum ✅\"}}]}} }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Send Confirmation Button",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                900,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Execute Workflow Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "OpenAI Analysis",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenAI Analysis": {
+            "main": [
+                [
+                    {
+                        "node": "Send Confirmation Button",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

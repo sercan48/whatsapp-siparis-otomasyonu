@@ -1,0 +1,7 @@
+
+-- Trigger to execute update_ai_billing on new usage log
+DROP TRIGGER IF EXISTS trigger_update_ai_billing ON ai_usage_logs;
+CREATE TRIGGER trigger_update_ai_billing
+    AFTER INSERT ON ai_usage_logs
+    FOR EACH ROW
+    EXECUTE FUNCTION update_ai_billing();

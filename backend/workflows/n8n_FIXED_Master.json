@@ -1,0 +1,221 @@
+{
+    "name": "1_Master_Webhook_FIXED",
+    "nodes": [
+        {
+            "parameters": {
+                "path": "whatsapp-webhook",
+                "httpMethod": "GET",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "name": "Webhook GET (Verify)",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                380,
+                240
+            ],
+            "webhookId": "whatsapp-webhook"
+        },
+        {
+            "parameters": {
+                "path": "whatsapp-webhook",
+                "httpMethod": "POST",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "name": "Webhook POST (Messages)",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                380,
+                440
+            ],
+            "webhookId": "whatsapp-webhook"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "string": [
+                        {
+                            "value1": "={{ $json.query['hub.verify_token'] }}",
+                            "operation": "equal",
+                            "value2": "resto123"
+                        }
+                    ]
+                }
+            },
+            "name": "Check Verify Token",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                600,
+                240
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "text",
+                "responseBody": "={{ $json.query['hub.challenge'] }}",
+                "options": {
+                    "responseCode": 200
+                }
+            },
+            "name": "Respond Challenge",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                820,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "text",
+                "responseBody": "Invalid Token",
+                "options": {
+                    "responseCode": 403
+                }
+            },
+            "name": "Respond Forbidden",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                820,
+                360
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "text",
+                "responseBody": "OK",
+                "options": {
+                    "responseCode": 200
+                }
+            },
+            "name": "Acknowledge POST",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                600,
+                440
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const entry = $input.item.json.body.entry?.[0];\nif (!entry) return [];\n\nconst change = entry.changes?.[0];\nif (!change) return [];\n\nconst value = change.value;\nconst message = value.messages?.[0];\n\nif (!message) return [];\n\nconst contact = value.contacts?.[0];\n\nreturn {\n  json: {\n    phone_number_id: value.metadata.phone_number_id,\n    customer_phone: message.from,\n    customer_name: contact?.profile?.name || 'Müşteri',\n    message_id: message.id,\n    message_type: message.type,\n    message_text: message.text?.body || message.interactive?.button_reply?.title || message.interactive?.list_reply?.title || '',\n    timestamp: message.timestamp,\n    is_button_reply: message.type === 'interactive'\n  }\n};"
+            },
+            "name": "Extract Message",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                820,
+                540
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://graph.facebook.com/v17.0/{{ $env.WHATSAPP_PHONE_ID }}/messages",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer {{ $env.WHATSAPP_TOKEN }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "messaging_product",
+                            "value": "whatsapp"
+                        },
+                        {
+                            "name": "to",
+                            "value": "={{ $json.customer_phone }}"
+                        },
+                        {
+                            "name": "type",
+                            "value": "text"
+                        },
+                        {
+                            "name": "text",
+                            "value": "={{ {\"body\": \"🤖 Mesajın alındı: \" + $json.message_text} }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Simple AutoReply",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                1040,
+                540
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook GET (Verify)": {
+            "main": [
+                [
+                    {
+                        "node": "Check Verify Token",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check Verify Token": {
+            "main": [
+                [
+                    {
+                        "node": "Respond Challenge",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Respond Forbidden",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Webhook POST (Messages)": {
+            "main": [
+                [
+                    {
+                        "node": "Acknowledge POST",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Extract Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extract Message": {
+            "main": [
+                [
+                    {
+                        "node": "Simple AutoReply",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

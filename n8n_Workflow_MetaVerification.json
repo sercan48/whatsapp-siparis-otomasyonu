@@ -1,0 +1,70 @@
+{
+    "name": "WhatsApp Connect (Meta Verification)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "GET",
+                "path": "webhook",
+                "options": {}
+            },
+            "name": "Webhook (GET)",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ],
+            "webhookId": "webhook"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Meta sends 'hub.challenge' and 'hub.verify_token' in query params\nconst query = items[0].json.query;\nconst challenge = query['hub.challenge'];\nconst token = query['hub.verify_token'];\nconst mySecret = 'whatsapp-demo-token'; // Meta paneline yazdığınız şifre bu olmalı!\n\nif (token === mySecret) {\n  return [{ json: { body: parseInt(challenge) } }];  // Return challenge as integer or string depending on n8n version, usually int works best for auto-response\n} else {\n  throw new Error('Invalid Verify Token');\n}"
+            },
+            "name": "Check Token",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "text",
+                "responseBody": "={{ $json.body }}",
+                "options": {}
+            },
+            "name": "Respond Check",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                650,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook (GET)": {
+            "main": [
+                [
+                    {
+                        "node": "Check Token",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check Token": {
+            "main": [
+                [
+                    {
+                        "node": "Respond Check",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

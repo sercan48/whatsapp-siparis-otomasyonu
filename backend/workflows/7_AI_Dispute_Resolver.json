@@ -1,0 +1,276 @@
+{
+    "name": "7_AI_Dispute_Resolver",
+    "active": false,
+    "versionId": "77777777-7777-7777-7777-777777777779",
+    "nodes": [
+        {
+            "parameters": {},
+            "name": "Execute Workflow Trigger",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                460,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "SELECT * FROM customers WHERE phone = $1",
+                "arguments": {
+                    "1": "={{ $json.customer_phone }}"
+                }
+            },
+            "name": "Get Customer Trust Score",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                680,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.openai.com/v1/chat/completions",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "model",
+                            "value": "gpt-4-turbo"
+                        },
+                        {
+                            "name": "messages",
+                            "value": "={{ [{\"role\": \"system\", \"content\": \"You are an expert Customer Support Psychologist. Analyze the customer's message context, tone, and intent.\\n\\nScoring Guide (sentiment_score 1-10):\\n- 1-3 (Neutral/Positive): Questions, thanks, normal feedback.\\n- 4-6 (Annoyed): Mild complaints, 'Late', 'Cold', disappointment.\\n- 7-8 (Angry): Clear dissatisfaction, 'Cancel order', 'Never again'.\\n- 9-10 (Rage/Destructive): Insults, threats ('I will sue you'), shouting (ALL CAPS), or sarcasm ('Great service(!)').\\n\\nDetect SARCASM: If they say 'Perfect(!)' but mean bad, score high (8-9).\\n\\nReturn JSON: {\\\"sentiment_score\\\": integer, \\\"category\\\": \\\"product\\\" (wrong/burnt/missing) or \\\"abstract\\\" (cold/late), \\\"reasoning\\\": string}\"}, {\"role\": \"user\", \"content\": $json.message_text}] }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "AI Sherlock Analysis",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                680,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "number": [
+                        {
+                            "value1": "={{ $json[\"AI Sherlock Analysis\"].data.sentiment_score }}",
+                            "operation": "largerEqual",
+                            "value2": 9
+                        }
+                    ]
+                }
+            },
+            "name": "Rage Check (Sentiment >= 9)",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                900,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "content": "🚨 ACİL DURUM: Müşteri çok öfkeli (Skor: {{ $json[\"AI Sherlock Analysis\"].data.sentiment_score }}).\\nAnaliz: {{ $json[\"AI Sherlock Analysis\"].data.reasoning }}\\nLütfen hemen arayın! Tel: {{ $json.customer_phone }}",
+                "to": "{{ $env.ADMIN_PHONE_NUMBER }}"
+            },
+            "name": "Escalate to Admin",
+            "type": "n8n-nodes-base.whatsapp",
+            "typeVersion": 1,
+            "position": [
+                1100,
+                50
+            ]
+        },
+        {
+            "parameters": {
+                "content": "Sizi çok iyi anlıyorum ve çok üzgünüm. Konuyu restoran müdürümüze ilettim, kendisi sizi 2 dakika içinde bizzat arayacak. Lütfen bekleyin. 🙏",
+                "to": "={{ $json.customer_phone }}"
+            },
+            "name": "Calm Down Message",
+            "type": "n8n-nodes-base.whatsapp",
+            "typeVersion": 1,
+            "position": [
+                1100,
+                150
+            ]
+        },
+        {
+            "parameters": {
+                "dataType": "string",
+                "value1": "={{ $json[\"AI Sherlock Analysis\"].data.category }}",
+                "rules": {
+                    "rules": [
+                        {
+                            "value2": "product",
+                            "output": 0
+                        },
+                        {
+                            "value2": "abstract",
+                            "output": 1
+                        }
+                    ]
+                }
+            },
+            "name": "Category Switch",
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 1,
+            "position": [
+                1100,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "number": [
+                        {
+                            "value1": "={{ $json[\"Get Customer Trust Score\"].data.trust_score }}",
+                            "operation": "smaller",
+                            "value2": 50
+                        }
+                    ]
+                }
+            },
+            "name": "Low Score Check",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1300,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "content": "📸 Anladım. Şefimize iletmem için ürünün bir fotoğrafını hemen çekip atabilir misin?",
+                "to": "={{ $json.customer_phone }}"
+            },
+            "name": "Ask for Proof",
+            "type": "n8n-nodes-base.whatsapp",
+            "typeVersion": 1,
+            "position": [
+                1500,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "content": "🎁 Özür dileriz! Bir sonraki siparişinde SUFLE bizden ikram! Hesabına işledim.",
+                "to": "={{ $json.customer_phone }}"
+            },
+            "name": "Offer Product Gift",
+            "type": "n8n-nodes-base.whatsapp",
+            "typeVersion": 1,
+            "position": [
+                1500,
+                400
+            ]
+        }
+    ],
+    "connections": {
+        "Execute Workflow Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "AI Sherlock Analysis",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Get Customer Trust Score",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Sherlock Analysis": {
+            "main": [
+                [
+                    {
+                        "node": "Rage Check (Sentiment >= 9)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Rage Check (Sentiment >= 9)": {
+            "main": [
+                [
+                    {
+                        "node": "Escalate to Admin",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Calm Down Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Category Switch",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Category Switch": {
+            "main": [
+                [
+                    {
+                        "node": "Low Score Check",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Offer Product Gift",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Low Score Check": {
+            "main": [
+                [
+                    {
+                        "node": "Ask for Proof",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Offer Product Gift",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

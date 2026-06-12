@@ -1,0 +1,82 @@
+{
+    "name": "5_New_Reseller_Alert",
+    "active": false,
+    "versionId": "55555555-5555-5555-5555-555555555555",
+    "nodes": [
+        {
+            "parameters": {
+                "event": [
+                    "insert"
+                ],
+                "tableId": "reseller_applications",
+                "columns": []
+            },
+            "name": "Application Trigger",
+            "type": "n8n-nodes-base.supabaseTrigger",
+            "typeVersion": 1,
+            "position": [
+                460,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://graph.facebook.com/v17.0/{{ $env.WHATSAPP_PHONE_ID }}/messages",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer {{ $env.WHATSAPP_TOKEN }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "messaging_product",
+                            "value": "whatsapp"
+                        },
+                        {
+                            "name": "to",
+                            "value": "{{ $env.ADMIN_PHONE_NUMBER }}"
+                        },
+                        {
+                            "name": "type",
+                            "value": "text"
+                        },
+                        {
+                            "name": "text",
+                            "value": "={{ {\"body\": \"🛡️ YENİ BAYİ BAŞVURUSU!\\n\\nAd: \" + $json.first_name + \" \" + $json.last_name + \"\\nTel: \" + $json.phone + \"\\n\\nAdmin panelinden onaylayabilirsiniz.\"} }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Notify Super Admin",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                680,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Application Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Notify Super Admin",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

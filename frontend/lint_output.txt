@@ -1,0 +1,7 @@
+﻿
+C:\Users\WIN\Desktop\Whatsapp Sipari┼ş Otomasyonu\frontend\src\components\SlugMenuPage.jsx
+   65:8  warning  React Hook useEffect has a missing dependency: 'fetchMenuBySlug'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  220:8  warning  React Hook useEffect has a missing dependency: 'discountResult'. Either include it or remove the dependency array   react-hooks/exhaustive-deps
+
+Ô£û 2 problems (0 errors, 2 warnings)
+

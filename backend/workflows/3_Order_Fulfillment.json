@@ -1,0 +1,125 @@
+{
+    "name": "3_Order_Fulfillment",
+    "active": false,
+    "versionId": "33333333-3333-3333-3333-333333333333",
+    "nodes": [
+        {
+            "parameters": {
+                "path": "confirm-order",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "name": "Confirmation Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                460,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "create",
+                "tableId": "orders",
+                "dataMode": "defineBelow",
+                "fieldsUi": {
+                    "fieldValues": [
+                        {
+                            "fieldId": "customer_phone",
+                            "fieldValue": "={{ $json.body.customer_phone }}"
+                        },
+                        {
+                            "fieldId": "items",
+                            "fieldValue": "={{ $json.body.items }}"
+                        },
+                        {
+                            "fieldId": "total_amount",
+                            "fieldValue": "={{ $json.body.total }}"
+                        },
+                        {
+                            "fieldId": "status",
+                            "fieldValue": "pending"
+                        }
+                    ]
+                }
+            },
+            "name": "Create Order in DB",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                680,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://graph.facebook.com/v17.0/{{ $env.WHATSAPP_PHONE_ID }}/messages",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer {{ $env.WHATSAPP_TOKEN }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "messaging_product",
+                            "value": "whatsapp"
+                        },
+                        {
+                            "name": "to",
+                            "value": "{{ $env.ADMIN_PHONE_NUMBER }}"
+                        },
+                        {
+                            "name": "type",
+                            "value": "text"
+                        },
+                        {
+                            "name": "text",
+                            "value": "={{ {\"body\": \"🔔 Yeni Sipariş Geldi!\\nTutar: \" + $json.total_amount + \" TL\"} }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Notify Admin",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                900,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Confirmation Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Create Order in DB",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Create Order in DB": {
+            "main": [
+                [
+                    {
+                        "node": "Notify Admin",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

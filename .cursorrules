@@ -1,0 +1,22 @@
+# AI CODING RULES (Sistem Talimatı)
+
+**Amaç:** AI asistanların (Cursor, Copilot, vs.) güvenli, güncel ve hatasız kod üretmesini sağlamak.
+
+## 1. Paket Güvenliği (Ghost Package Koruması)
+*   **Kural:** Asla varlığı doğrulanmamış bir `npm` paketi önerme.
+*   **Kontrol:** Paket adını ve son güncellenme tarihini kontrol et. Şüpheli veya çok eski paketleri kullanma.
+*   **Slopsquatting:** Paket isminin doğruluğundan emin ol (örn: `react-dom` yerine `rct-dom` gibi benzer isimlere dikkat et).
+
+## 2. Versiyon Farkındalığı (Training Cutoff)
+*   **Kural:** "Deprecated" (kullanımdan kalkmış) kütüphaneleri veya versiyonları önerme.
+*   **Standart:** Proje `.npmrc` dosyasındaki `save-exact=true` ayarına saygı duy. Versiyonları sabitle.
+*   **Örnek:** Next.js 14 yerine stabil ve güncel sürüm özelliklerini kullan (Dokümantasyon kontrolü yap).
+
+## 3. Kod Güvenliği
+*   **Input Validation:** Kullanıcı girdilerini her zaman doğrula (Zod, Joi vb. ile).
+*   **SQL Injection:** Asla parametresiz ham SQL sorgusu yazma. `supabase.rpc` veya parametreli sorgular kullan.
+*   **XSS:** `dangerouslySetInnerHTML` kullanımından kaçın. Zorunluysa sanitize et (DOMPurify).
+
+## 4. Tedarik Zinciri
+*   **Kurulum:** `npm install` yerine CI/CD süreçlerinde `npm ci` kullanıldığını varsay.
+*   **Audit:** Her yeni paket eklemesinde `npm audit` çalıştırılmasını hatırlat.

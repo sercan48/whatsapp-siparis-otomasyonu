@@ -1,0 +1,84 @@
+{
+    "name": "4_Status_Updater",
+    "active": false,
+    "versionId": "44444444-4444-4444-4444-444444444444",
+    "nodes": [
+        {
+            "parameters": {
+                "event": [
+                    "update"
+                ],
+                "tableId": "orders",
+                "columns": [
+                    "status"
+                ]
+            },
+            "name": "Supabase Trigger",
+            "type": "n8n-nodes-base.supabaseTrigger",
+            "typeVersion": 1,
+            "position": [
+                460,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://graph.facebook.com/v17.0/{{ $env.WHATSAPP_PHONE_ID }}/messages",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer {{ $env.WHATSAPP_TOKEN }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "messaging_product",
+                            "value": "whatsapp"
+                        },
+                        {
+                            "name": "to",
+                            "value": "={{ $json.customer_phone }}"
+                        },
+                        {
+                            "name": "type",
+                            "value": "template"
+                        },
+                        {
+                            "name": "template",
+                            "value": "={{ {\"name\": \"order_status_update\", \"language\": {\"code\": \"tr\"}, \"components\": [{\"type\": \"body\", \"parameters\": [{\"type\": \"text\", \"text\": $json.status}]}]} }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Notify Customer",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                680,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Supabase Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Notify Customer",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

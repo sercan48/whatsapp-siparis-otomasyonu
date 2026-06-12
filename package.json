@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "audit:fix": "npm audit fix",
+    "prebuild": "npm audit --audit-level=high",
+    "security-check": "npm audit && echo 'Güvenlik taraması temiz!'"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.91.0",
+    "dotenv": "^17.2.3"
+  }
+}

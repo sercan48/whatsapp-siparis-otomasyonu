@@ -1,0 +1,322 @@
+{
+    "name": "1_Master_Webhook",
+    "active": true,
+    "nodes": [
+        {
+            "parameters": {
+                "path": "whatsapp-webhook",
+                "httpMethod": "={{$request.method}}",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "name": "WhatsApp Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                460,
+                300
+            ],
+            "webhookId": "whatsapp-webhook"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "leftValue": "={{ $json.query['hub.mode'] }}",
+                            "rightValue": "subscribe",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                }
+            },
+            "name": "Is Verification?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                680,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "leftValue": "={{ $json.query['hub.verify_token'] }}",
+                            "rightValue": "resto123",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                }
+            },
+            "name": "Token Valid?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                900,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "text",
+                "responseBody": "={{ $json.query['hub.challenge'] }}",
+                "options": {
+                    "responseCode": 200
+                }
+            },
+            "name": "Return Challenge",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                1120,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "text",
+                "responseBody": "Invalid verify token",
+                "options": {
+                    "responseCode": 403
+                }
+            },
+            "name": "Reject Verification",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                1120,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={\"status\": \"received\"}",
+                "options": {
+                    "responseCode": 200
+                }
+            },
+            "name": "Acknowledge Message",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                900,
+                500
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "leftValue": "={{ $json.body?.entry?.[0]?.changes?.[0]?.value?.messages?.length > 0 }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "true"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                }
+            },
+            "name": "Has Message?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                900,
+                700
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const entry = $input.item.json.body.entry[0];\nconst change = entry.changes[0];\nconst value = change.value;\n\nconst message = value.messages[0];\nconst contact = value.contacts?.[0];\n\nreturn {\n  json: {\n    phone_number_id: value.metadata.phone_number_id,\n    customer_phone: message.from,\n    customer_name: contact?.profile?.name || 'Müşteri',\n    message_id: message.id,\n    message_type: message.type,\n    message_text: message.text?.body || message.interactive?.button_reply?.title || message.interactive?.list_reply?.title || '',\n    timestamp: message.timestamp,\n    is_button_reply: message.type === 'interactive'\n  }\n};"
+            },
+            "name": "Extract Message Data",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1120,
+                600
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "leftValue": "={{ $json.is_button_reply }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "true"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                }
+            },
+            "name": "Is Button Reply?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                1340,
+                600
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": "={{ $workflow.id.replace('1', '3') }}"
+            },
+            "name": "Execute Fulfillment",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1,
+            "position": [
+                1560,
+                500
+            ],
+            "disabled": true
+        },
+        {
+            "parameters": {
+                "workflowId": "={{ $workflow.id.replace('1', '2') }}"
+            },
+            "name": "Execute AI Processor",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1,
+            "position": [
+                1560,
+                700
+            ],
+            "disabled": true
+        }
+    ],
+    "connections": {
+        "WhatsApp Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Is Verification?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Is Verification?": {
+            "main": [
+                [
+                    {
+                        "node": "Token Valid?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Has Message?",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Acknowledge Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Token Valid?": {
+            "main": [
+                [
+                    {
+                        "node": "Return Challenge",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Reject Verification",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Has Message?": {
+            "main": [
+                [
+                    {
+                        "node": "Extract Message Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "Extract Message Data": {
+            "main": [
+                [
+                    {
+                        "node": "Is Button Reply?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Is Button Reply?": {
+            "main": [
+                [
+                    {
+                        "node": "Execute Fulfillment",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Execute AI Processor",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    }
+}

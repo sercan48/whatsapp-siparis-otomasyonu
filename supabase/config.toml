@@ -1,0 +1,10 @@
+project_id = "pcmlhgjphgquobcdpjpd"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "auth"]
+extra_search_path = ["public"]
+
+[db]
+port = 54322

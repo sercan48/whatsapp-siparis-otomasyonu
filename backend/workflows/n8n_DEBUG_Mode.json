@@ -1,0 +1,91 @@
+{
+    "name": "1_Master_Webhook_DEBUG",
+    "nodes": [
+        {
+            "parameters": {
+                "path": "whatsapp-webhook",
+                "httpMethod": "POST",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "name": "Webhook POST",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                380,
+                440
+            ],
+            "webhookId": "whatsapp-webhook"
+        },
+        {
+            "parameters": {
+                "respondWith": "text",
+                "responseBody": "Received",
+                "options": {
+                    "responseCode": 200
+                }
+            },
+            "name": "Ack",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                600,
+                340
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const payload = JSON.stringify($input.item.json.body, null, 2);\nreturn { json: { payload } };"
+            },
+            "name": "Format JSON",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                600,
+                540
+            ]
+        },
+        {
+            "parameters": {
+                "fileName": "c:\\Users\\WIN\\Desktop\\webhook_debug_log.txt",
+                "dataPropertyName": "payload"
+            },
+            "name": "Write to File",
+            "type": "n8n-nodes-base.writeBinaryFile",
+            "typeVersion": 1,
+            "position": [
+                820,
+                540
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook POST": {
+            "main": [
+                [
+                    {
+                        "node": "Ack",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Format JSON",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format JSON": {
+            "main": [
+                [
+                    {
+                        "node": "Write to File",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}
