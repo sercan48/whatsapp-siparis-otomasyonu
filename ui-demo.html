@@ -3594,7 +3594,15 @@
                 messagesBox.innerHTML += `
                     <div class="flex justify-start">
                         <div class="bg-slate-800 border border-slate-700/80 text-slate-100 p-3 rounded-2xl max-w-[80%] text-sm rounded-tl-none shadow">
-                                    function validateCustomizationInput(tenant, qId, userMsg) {
+                            ${response}
+                        </div>
+                    </div>
+                `;
+                messagesBox.scrollTop = messagesBox.scrollHeight;
+            }, 1000);
+        }
+
+        function validateCustomizationInput(tenant, qId, userMsg) {
             const val = userMsg.toLowerCase().trim();
             if (tenant.business_type === 'restaurant' && qId === 'customizations') {
                 const unallowedSought = ['pesto', 'köri', 'curry', 'cheddar'];
